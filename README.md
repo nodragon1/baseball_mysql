@@ -79,3 +79,4 @@ insert into pitches (ab_id, speed, pitch_type, pitch_num)
 select ab_id, start_speed, pitch_type, pitch_num
 from pitches_staging
 ```
+- **ERD diagram**
