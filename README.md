@@ -80,3 +80,10 @@ select ab_id, start_speed, pitch_type, pitch_num
 from pitches_staging
 ```
 - **ERD diagram**
+<center>
+  <img
+    src="erd.png"
+    width="700"
+    height="700"
+  />
+</center>
