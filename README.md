@@ -87,3 +87,88 @@ from pitches_staging
     height="200"
   />
 </center>
+
+## 데이터 분석
+### 경기장 별 평균 득점
+```sql
+select venue_name, round(avg(home_final_score + away_final_score), 2) avg_score
+from games
+group by venue_name
+order by avg_score desc
+limit 10;
+```
+### 결과
+|**venue_name**|**avg_score**|
+|:---:|:---:|
+|London Stadium|25.00|
+|Coors Field|12.96|
+|Estadio de Beisbol Monterrey|12.75|
+|Globe Life Park in Arlington|11.61|
+|Oriole Park at Camden Yards|11.00|
+|Fenway Park|10.67|
+|PNC Park|10.43|
+|Target Field|10.32|
+|Nationals Park|10.28|
+|Angel Stadium|10.07|
+
+이벤트 경기를 위해 축구장을 개조해서 만든 London Stadium에서 매우 많은 득점이 나왔다. 하지만, 표본 수가 적어서 신뢰도가 떨어진다. 표본 수가 충분히 많은 Coors Field는 고산 지대에 위치하여 기압이 상대적으로 낮아 비거리가 길게 나오기 때문에 많은 득점이 나온 것으로 확인된다.
+
+### 경기장 별 패스트볼 구속
+```sql
+select g.venue_name, round(avg(p.speed), 2) speed
+from games g
+join atbats a 
+on g.g_id = a.g_id 
+join (select ab_id, speed
+	  from pitches
+	  where pitch_type in ('FF', 'FT', 'FC', 'SI')) p
+on a.ab_id = p.ab_id
+group by venue_name
+order by speed desc
+limit 10
+```
+### 결과
+|**venue_name**|**speed**|
+|:---:|:---:|
+|London Stadium|93.77|
+|Citi Field|93.57|
+|Coors Field|93.1|
+|Yankee Stadium|93.06|
+|Great American Ball Park|93.02|
+|Marlins Park|92.98|
+|Minute Maid Park|92.92|
+|PNC Park|92.85|
+|Globe Life Park in Arlington|92.79|
+|Guaranteed Rate Field|92.78|
+
+패스트볼 구속 비교를 위해, 패스트볼 계열인 포심, 투심, 커터, 싱커를 필터링하였다. 이번에도 London Stadium의 구속이 가장 높게 측정되었지만, 표본 수가 적어 신뢰도는 현저히 떨어진다. 패스트볼 구속은 경기장 별로 유의미한 차이를 보이지 않았고, 강속구 투수가 많은 팀의 경기장에서 높게 측정되었을 가능성이 높다.
+
+### 홈런 갯수와 득점 수의 상관관계
+```sql
+create table correlation (x float not null, y float not null);
+
+insert into correlation (x, y)
+select (g.home_final_score + g.away_final_score), a.home_run
+from games g
+join (select g_id, count(event) home_run
+	  from atbats
+	  where event = 'Home Run'
+	  group by g_id) a
+on g.g_id = a.g_id;
+
+select @ax := avg(x), 
+       @ay := avg(y), 
+       @div := (stddev_samp(x) * stddev_samp(y))
+from correlation;
+
+select sum( ( x - @ax ) * (y - @ay) ) / ((count(x) -1) * @div) cor from correlation;
+```
+### 결과
+```
++--------------------+
+|                cor |
++--------------------+
+|  0.610837301137650 |
++--------------------+
+```
+상관 계수를 구하기 위한 테이블을 생성한 후, 홈런 갯수와 득점 수 데이터를 삽입한다. 이후 상관계수 식을 통하여, 두 컬럼간의 상관계수를 구한다. 홈런과 득점은 약 0.61의 상당히 높은 상관계수를 가진다. 즉, 홈런은 승리에 큰 영향을 미친다. 
