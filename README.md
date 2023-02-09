@@ -83,7 +83,7 @@ from pitches_staging
 <center>
   <img
     src="erd.png"
-    width="400"
+    width="500"
     height="200"
   />
 </center>
